@@ -1,2 +1,5 @@
-# mailem
-mlm demo add help@mailem.ai
+# Bugle
+
+```bash
+bug demo add help@mailem.ai
+```
