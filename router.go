@@ -1,12 +1,13 @@
 package bugle
 
 import (
-	"encoding/json"
 	"net/http"
 )
 
+// Router composes http's ServeMux struct for http routing
 type Router struct{ *http.ServeMux }
 
+// NewRouter creates a new router and binds all routes
 func NewRouter() *Router {
 	s := &Router{http.NewServeMux()}
 	s.HandleFunc("/create", s.CreateList)
@@ -17,60 +18,48 @@ func NewRouter() *Router {
 	return s
 }
 
-func (s *Router) CreateList(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		ListName string `json:"listName"`
-	}
+// CreateList creates a new list
+// [POST] /create { listName }
+func (Router) CreateList(w http.ResponseWriter, r *http.Request) {
+	body, db := parse(r.Body), NewDBClient(r.Context())
 
-	json.NewDecoder(r.Body).Decode(&body)
-	db := NewDBClient(r.Context())
 	emails := db.NewList(body.ListName)
-	json.NewEncoder(w).Encode(emails)
+	w.WriteHeader(respond(w, emails, db.err))
 }
 
-func (s *Router) ViewList(w http.ResponseWriter, r *http.Request) {
-	listName := r.URL.Query().Get("list")
+// ViewList gets all subscriptsion for a list
+// [GET] /view?list=my%20friends
+func (Router) ViewList(w http.ResponseWriter, r *http.Request) {
+	listName, db := r.URL.Query().Get("list"), NewDBClient(r.Context())
 
-	db := NewDBClient(r.Context())
 	emails := db.GetSubscriptions(listName)
-	json.NewEncoder(w).Encode(emails)
+	w.WriteHeader(respond(w, emails, db.err))
 }
 
-func (s *Router) AddEmail(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		ListName string `json:"listName"`
-		Name     string `json:"name"`
-		Address  string `json:"address"`
-	}
+// AddEmail creates a subscription for a list
+// [POST] /add { listName, name, address }
+func (Router) AddEmail(w http.ResponseWriter, r *http.Request) {
+	body, db := parse(r.Body), NewDBClient(r.Context())
 
-	json.NewDecoder(r.Body).Decode(&body)
-	db := NewDBClient(r.Context())
 	subscription := db.NewSubscription(body.ListName, body.Name, body.Address)
-	json.NewEncoder(w).Encode(subscription)
+	w.WriteHeader(respond(w, subscription, db.err))
 }
 
-func (s *Router) RemoveEmail(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		ListName string `json:"listName"`
-		Address  string `json:"address"`
-	}
+// RemoveEmail removes a subscription from a list by address
+// [POST] /add { listName, address }
+func (Router) RemoveEmail(w http.ResponseWriter, r *http.Request) {
+	body, db := parse(r.Body), NewDBClient(r.Context())
 
-	json.NewDecoder(r.Body).Decode(&body)
-	db := NewDBClient(r.Context())
 	db.DeleteSubscription(body.ListName, body.Address)
-	w.WriteHeader(200)
+	w.WriteHeader(respond(w, nil, db.err))
 }
 
-func (s *Router) SendMailBlast(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Message  string `json:"message"`
-		ListName string `json:"listName"`
-	}
+// SendMailBlast sends mail to all subscriptions on a list
+// [POST] /send { message, listName }
+func (Router) SendMailBlast(w http.ResponseWriter, r *http.Request) {
+	body, db, gmail := parse(r.Body), NewDBClient(r.Context()), NewGmailClient(r.Context())
 
-	json.NewDecoder(r.Body).Decode(&body)
-	db := NewDBClient(r.Context())
-	gmail := NewGmailClient(r.Context())
 	emails := db.GetSubscriptions(body.ListName)
-	gmail.SendEmail(body.Message, emails...)
-	w.WriteHeader(200)
+	err := gmail.SendEmail(body.Message, emails...)
+	w.WriteHeader(respond(w, nil, db.err, err))
 }

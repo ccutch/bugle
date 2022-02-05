@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -16,27 +15,24 @@ import (
 
 type DBClient struct {
 	ctx    context.Context
+	err    error
 	client *mongo.Client
 }
 
 func NewDBClient(ctx context.Context) *DBClient {
 	var db DBClient
-	var err error
 	var cancel context.CancelFunc
 
 	options := options.Client().ApplyURI(os.Getenv("DB_URI"))
 	db.ctx, cancel = context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	db.client, err = mongo.NewClient(options)
-	if err != nil {
-		log.Fatal(err)
+
+	db.client, db.err = mongo.NewClient(options)
+	if db.err != nil {
+		return &db
 	}
 
-	err = db.client.Connect(db.ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	db.err = db.client.Connect(db.ctx)
 	return &db
 }
 
@@ -45,36 +41,46 @@ func (db *DBClient) lists() *mongo.Collection { return db.mongoDB().Collection("
 func (db *DBClient) subs() *mongo.Collection  { return db.mongoDB().Collection("subs") }
 
 func (db *DBClient) NewList(name string) string {
-	res, err := db.lists().InsertOne(db.ctx, bson.M{"name": name})
-	if err != nil {
-		log.Fatal(err)
+	if db.err != nil {
+		return ""
 	}
+
+	var res *mongo.InsertOneResult
+	res, db.err = db.lists().InsertOne(db.ctx, bson.M{"name": name})
 	return fmt.Sprint(res.InsertedID)
 }
 
 func (db *DBClient) NewSubscription(listName, name, address string) string {
-	res, err := db.subs().InsertOne(db.ctx, bson.M{
+	if db.err != nil {
+		return ""
+	}
+
+	var res *mongo.InsertOneResult
+	res, db.err = db.subs().InsertOne(db.ctx, bson.M{
 		"name":     name,
 		"address":  address,
 		"listName": listName,
 		"added":    time.Now().Format("01-01-1970"),
 	})
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	return fmt.Sprint(res.InsertedID)
 }
 
 func (db *DBClient) GetSubscriptions(listName string) []string {
-	cursor, err := db.subs().Find(db.ctx, bson.M{"listName": listName})
-	if err != nil {
-		log.Fatal(err)
+	if db.err != nil {
+		return []string{}
+	}
+
+	var cursor *mongo.Cursor
+	cursor, db.err = db.subs().Find(db.ctx, bson.M{"listName": listName})
+	if db.err != nil {
+		return []string{}
 	}
 
 	var documents []bson.M
-	err = cursor.All(db.ctx, &documents)
-	if err != nil {
-		log.Fatal(err)
+	db.err = cursor.All(db.ctx, &documents)
+	if db.err != nil {
+		return []string{}
 	}
 
 	var subscriptions []string
@@ -89,8 +95,9 @@ func (db *DBClient) GetSubscriptions(listName string) []string {
 }
 
 func (db *DBClient) DeleteSubscription(listName, address string) {
-	_, err := db.subs().DeleteOne(db.ctx, bson.M{"listName": listName, "address": address})
-	if err != nil {
-		log.Fatal(err)
+	if db.err != nil {
+		return
 	}
+
+	_, db.err = db.subs().DeleteOne(db.ctx, bson.M{"listName": listName, "address": address})
 }

@@ -11,7 +11,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/gmail/v1"
@@ -25,12 +24,16 @@ type GmailClient struct {
 }
 
 func NewGmailClient(ctx context.Context) *GmailClient {
-	g := GmailClient{ctx: ctx}
+	g := &GmailClient{ctx: ctx}
 	g.setup()
-	return &g
+	return g
 }
 
 func (g *GmailClient) SendEmail(msg string, emails ...string) error {
+	if len(emails) == 0 {
+		return nil
+	}
+
 	messageParts := []string{
 		"From: 'me'",
 		"reply-to: help@bugle.email",
@@ -42,32 +45,55 @@ func (g *GmailClient) SendEmail(msg string, emails ...string) error {
 	messageString := strings.Join(messageParts, "\r\n")
 	messageBytes := base64.StdEncoding.EncodeToString([]byte(messageString))
 	_, err := g.service.Users.Messages.Send("", &gmail.Message{Raw: messageBytes}).Do()
-	return errors.Wrap(err, "Error sending email")
+	return err
+}
 
+type setupState struct {
+	file string
+	cont []byte
+	conf *oauth2.Config
+	err  error
 }
 
 func (g *GmailClient) setup() error {
-	b, err := ioutil.ReadFile("credentials.json")
-	if err != nil {
-		return err
+	state := setupState{"credentials.json", []byte{}, nil, nil}
+	state.loadCredentials()
+	state.parseConfig()
+	state.getClient(g)
+	state.getService(g)
+	return state.err
+}
+
+func (s *setupState) loadCredentials() {
+	if s.err != nil {
+		return
 	}
 
-	config, err := google.ConfigFromJSON(b, gmail.GmailReadonlyScope)
-	if err != nil {
-		return err
+	s.cont, s.err = ioutil.ReadFile("credentials.json")
+}
+
+func (s *setupState) parseConfig() {
+	if s.err != nil {
+		return
 	}
 
-	g.client, err = g.getClient(g.ctx, config)
-	if err != nil {
-		return err
+	s.conf, s.err = google.ConfigFromJSON(s.cont, gmail.GmailReadonlyScope)
+}
+
+func (s *setupState) getClient(g *GmailClient) {
+	if s.err != nil {
+		return
 	}
 
-	g.service, err = gmail.NewService(g.ctx, option.WithHTTPClient(g.client))
-	if err != nil {
-		return err
+	g.client, s.err = g.getClient(g.ctx, s.conf)
+}
+
+func (s *setupState) getService(g *GmailClient) {
+	if s.err != nil {
+		return
 	}
 
-	return err
+	g.service, s.err = gmail.NewService(g.ctx, option.WithHTTPClient(g.client))
 }
 
 func (g *GmailClient) getClient(ctx context.Context, config *oauth2.Config) (*http.Client, error) {
