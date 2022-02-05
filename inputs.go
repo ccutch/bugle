@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net/http"
 )
 
 type validInputs struct {
@@ -18,10 +19,12 @@ func parse(r io.Reader) (inputs validInputs) {
 	return inputs
 }
 
-func respond(w io.Writer, v interface{}, errs ...error) int {
+func respond(w http.ResponseWriter, v interface{}, errs ...error) {
 	switch {
 
 	case len(errs) > 0:
+		w.WriteHeader(500)
+
 		var buff bytes.Buffer
 		buff.WriteString("Error:\n\n")
 
@@ -29,10 +32,8 @@ func respond(w io.Writer, v interface{}, errs ...error) int {
 			buff.WriteString(err.Error() + "\n")
 		}
 		buff.WriteTo(w)
-		return 500
 
 	default:
 		json.NewEncoder(w).Encode(v)
-		return 200
 	}
 }

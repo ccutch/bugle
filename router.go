@@ -24,7 +24,7 @@ func (Router) CreateList(w http.ResponseWriter, r *http.Request) {
 	body, db := parse(r.Body), NewDBClient(r.Context())
 
 	emails := db.NewList(body.ListName)
-	w.WriteHeader(respond(w, emails, db.err))
+	respond(w, emails, db.err)
 }
 
 // ViewList gets all subscriptsion for a list
@@ -33,7 +33,7 @@ func (Router) ViewList(w http.ResponseWriter, r *http.Request) {
 	listName, db := r.URL.Query().Get("list"), NewDBClient(r.Context())
 
 	emails := db.GetSubscriptions(listName)
-	w.WriteHeader(respond(w, emails, db.err))
+	respond(w, emails, db.err)
 }
 
 // AddEmail creates a subscription for a list
@@ -42,7 +42,7 @@ func (Router) AddEmail(w http.ResponseWriter, r *http.Request) {
 	body, db := parse(r.Body), NewDBClient(r.Context())
 
 	subscription := db.NewSubscription(body.ListName, body.Name, body.Address)
-	w.WriteHeader(respond(w, subscription, db.err))
+	respond(w, subscription, db.err)
 }
 
 // RemoveEmail removes a subscription from a list by address
@@ -51,7 +51,7 @@ func (Router) RemoveEmail(w http.ResponseWriter, r *http.Request) {
 	body, db := parse(r.Body), NewDBClient(r.Context())
 
 	db.DeleteSubscription(body.ListName, body.Address)
-	w.WriteHeader(respond(w, nil, db.err))
+	respond(w, nil, db.err)
 }
 
 // SendMailBlast sends mail to all subscriptions on a list
@@ -61,5 +61,5 @@ func (Router) SendMailBlast(w http.ResponseWriter, r *http.Request) {
 
 	emails := db.GetSubscriptions(body.ListName)
 	err := gmail.SendEmail(body.Message, emails...)
-	w.WriteHeader(respond(w, nil, db.err, err))
+	respond(w, nil, db.err, err)
 }
