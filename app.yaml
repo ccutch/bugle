@@ -1,0 +1,2 @@
+runtime: go116
+main: ./cmd/server
