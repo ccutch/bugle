@@ -1,7 +1,0 @@
-runtime: go116
-main: ./cmd/server
-
-
-env_variables:
-  DB_URI: mongodb+srv://Gopher:t13OVlR9hQRcLIba@cluster0.aoapu.mongodb.net/default?retryWrites=true&w=majority
-  
