@@ -17,16 +17,16 @@ import (
 	"google.golang.org/api/option"
 )
 
+func Gmail(ctx context.Context) *GmailClient {
+	g := &GmailClient{ctx: ctx}
+	g.setup()
+	return g
+}
+
 type GmailClient struct {
 	ctx     context.Context
 	client  *http.Client
 	service *gmail.Service
-}
-
-func NewGmailClient(ctx context.Context) *GmailClient {
-	g := &GmailClient{ctx: ctx}
-	g.setup()
-	return g
 }
 
 func (g *GmailClient) SendEmail(msg string, emails ...string) error {
