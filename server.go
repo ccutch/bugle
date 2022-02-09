@@ -88,6 +88,12 @@ func (s server) send(w http.ResponseWriter, r *http.Request) {
 // handle creates a new handler, we also defer a recovery func
 // to handle serverErrors we encounter
 func (s server) handle(w http.ResponseWriter, r *http.Request) (*handler, *client) {
-	// TODO: any client connection pool logic
-	return &handler{w, r, nil, 0}, s.client
+	h := handler{w, r, nil, 200}
+	defer func() {
+		if r, ok := recover().(serverError); ok {
+			h.code = r.code
+			h.respond(nil, r.err)
+		}
+	}()
+	return &h, s.client
 }

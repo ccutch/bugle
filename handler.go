@@ -37,8 +37,7 @@ func (h handler) body() string {
 // fail error
 func (h *handler) handle(err error, code int) {
 	if err != nil {
-		h.code = code
-		h.err = err
+		panic(serverError{err, code})
 	}
 }
 
@@ -55,37 +54,29 @@ func (h *handler) restrictMethods(methods ...string) {
 		}
 	}
 
-	h.err = errors.New("Invalid method")
-	h.code = http.StatusBadRequest
+	h.handle(errors.New("Invalid method"), http.StatusMethodNotAllowed)
 }
 
 // respond is a helper function for normalize errorhandle
 func (h handler) respond(v interface{}, errs ...error) {
-	errs = clean(errs...)
-
-	switch {
+	h.w.WriteHeader(h.code)
+	switch errs = clean(errs); { // I wrote this way because worse with ifs
 	case len(errs) > 0:
-		if h.code > 0 {
-			h.w.WriteHeader(h.code)
-		} else {
-			h.w.WriteHeader(http.StatusInternalServerError)
-		}
-
-		var buff bytes.Buffer
-		buff.WriteString("Error:\n\n")
-
+		buff := bytes.NewBuffer([]byte("Error:\n\n"))
 		for _, err := range errs {
 			buff.WriteString(err.Error() + "\n")
 		}
 		buff.WriteTo(h.w)
 
 	default:
-		err := json.NewEncoder(h.w).Encode(v)
-		h.handle(err, http.StatusInternalServerError)
+		h.handle(
+			json.NewEncoder(h.w).Encode(v),
+			http.StatusInternalServerError,
+		)
 	}
 }
 
-func clean(errs ...error) (res []error) {
+func clean(errs []error) (res []error) {
 	for _, err := range errs {
 		if err != nil {
 			res = append(res, err)
