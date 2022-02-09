@@ -3,19 +3,23 @@ package bugle
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 )
 
 // request is for an individual request
 type handler struct {
-	w http.ResponseWriter
-	r *http.Request
+	w    http.ResponseWriter
+	r    *http.Request
+	err  error
+	code int
 }
 
 // listName is getter for url querystring value "list"
-func (h handler) listName() string {
-	return h.r.Context().Value("list").(string)
+func (h handler) list() *MailingList {
+	list := h.r.Context().Value("list").(MailingList)
+	return &list
 }
 
 // gmail is a getter for gmail client
@@ -31,9 +35,10 @@ func (h handler) body() string {
 }
 
 // fail error
-func (h handler) handle(err error, code int) {
+func (h *handler) handle(err error, code int) {
 	if err != nil {
-		panic(serverError{err, code})
+		h.code = code
+		h.err = err
 	}
 }
 
@@ -43,11 +48,26 @@ type serverError struct {
 	code int
 }
 
+func (h *handler) restrictMethods(methods ...string) {
+	for _, m := range methods {
+		if h.r.Method == m {
+			return
+		}
+	}
+
+	h.err = errors.New("Invalid method")
+	h.code = http.StatusBadRequest
+}
+
 // respond is a helper function for normalize errorhandle
 func (h handler) respond(v interface{}, errs ...error) {
 	switch {
 	case len(errs) > 0:
-		h.w.WriteHeader(http.StatusInternalServerError)
+		if h.code > 0 {
+			h.w.WriteHeader(h.code)
+		} else {
+			h.w.WriteHeader(http.StatusInternalServerError)
+		}
 
 		var buff bytes.Buffer
 		buff.WriteString("Error:\n\n")

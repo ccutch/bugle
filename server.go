@@ -6,10 +6,11 @@ import (
 )
 
 // Server creates a new router and binds all routes
-func Server(client *DBClient) http.Handler {
+func Server(client *client) http.Handler {
 	s := &server{http.NewServeMux(), client}
 	s.HandleFunc("/create", s.create)
 	s.HandleFunc("/view", s.view)
+	s.HandleFunc("/subs", s.subs)
 	s.HandleFunc("/add", s.add)
 	s.HandleFunc("/remove", s.remove)
 	s.HandleFunc("/send", s.send)
@@ -19,46 +20,58 @@ func Server(client *DBClient) http.Handler {
 // server composes http's ServeMux struct for http routing
 type server struct {
 	*http.ServeMux
-	client *DBClient
+	client *client
 }
 
 func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	ctx = context.WithValue(ctx, "list", r.URL.Query().Get("list"))
+	list, _ := s.client.getMailingList(r.URL.Query().Get("list"))
+	ctx := context.WithValue(r.Context(), "list", list)
 	s.ServeMux.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // create creates a new list
-// [POST] /create?list=<list>
+// [POST] /create
 func (s server) create(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
-	h.respond(db.NewList(h.listName()))
+	h.restrictMethods("POST")
+	h.respond(db.saveMailingList(h.list()))
 }
 
-// view gets all subscriptsion for a list
-// [GET] /view?list=<list>
+// view gets basic details for a list
+// [GET] /view
 func (s server) view(w http.ResponseWriter, r *http.Request) {
+	h, _ := s.handle(w, r)
+	h.restrictMethods("GET")
+	h.respond(h.list())
+}
+
+// subs gets all subscriptsion for a list
+// [GET] /subs
+func (s server) subs(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
-	h.respond(db.GetSubscriptions(h.listName()))
+	h.restrictMethods("GET")
+	h.respond(db.getSubscriptions(h.list()))
 }
 
 // add creates a subscription for a list
 // [POST] /add { listName, name, address }
 func (s server) add(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
-	h.respond(db.NewSubscription(
-		h.listName(),
-		r.FormValue("name"),
-		r.FormValue("address"),
-	))
+	h.restrictMethods("POST")
+	h.respond(db.saveSubscription(&Subscription{
+		list: h.list(),
+		User: r.FormValue("name"),
+		Addr: r.FormValue("address"),
+	}))
 }
 
 // remove removes a subscription from a list by address
-// [POST] /add { listName, address }
+// [DELETE] /add { listName, address }
 func (s server) remove(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
-	h.respond(nil, db.DeleteSubscription(
-		h.listName(),
+	h.restrictMethods("DELETE")
+	h.respond(nil, db.deleteSubscription(
+		h.list(),
 		r.FormValue("address"),
 	))
 }
@@ -67,18 +80,14 @@ func (s server) remove(w http.ResponseWriter, r *http.Request) {
 // [POST] /send { message, listName }
 func (s server) send(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
-	emails, err := db.GetSubscriptions(h.listName())
-	h.respond(nil, err, h.gmail().SendEmail(h.body(), emails...))
+	h.restrictMethods("POST")
+	subs, err := db.getSubscriptions(h.list())
+	h.respond(nil, err, h.gmail().SendEmail(h.body(), subs...))
 }
 
 // handle creates a new handler, we also defer a recovery func
 // to handle serverErrors we encounter
-func (s server) handle(w http.ResponseWriter, r *http.Request) (*handler, *DBClient) {
-	defer func() {
-		if r, ok := recover().(serverError); ok {
-			http.Error(w, r.err.Error(), r.code)
-		}
-	}()
-
-	return &handler{w, r}, s.client
+func (s server) handle(w http.ResponseWriter, r *http.Request) (*handler, *client) {
+	// TODO: any client connection pool logic
+	return &handler{w, r, nil, 0}, s.client
 }

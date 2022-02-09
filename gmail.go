@@ -29,8 +29,8 @@ type GmailClient struct {
 	service *gmail.Service
 }
 
-func (g *GmailClient) SendEmail(msg string, emails ...string) error {
-	if len(emails) == 0 {
+func (g *GmailClient) SendEmail(msg string, subs ...Subscription) error {
+	if len(subs) == 0 {
 		return nil
 	}
 

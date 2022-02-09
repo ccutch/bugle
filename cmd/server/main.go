@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/pkg/errors"
 
@@ -11,9 +10,9 @@ import (
 )
 
 func main() {
-	db, err := bugle.Mongo(os.Getenv("DB_URL"))
+	db, err := bugle.Datastore("bugle-340607")
 	if err != nil {
-		log.Fatal(errors.Wrapf(err, "Failed to connect db: %s", os.Getenv("DB_URL")))
+		log.Fatal(errors.Wrap(err, "Failed to connect db"))
 	}
 
 	log.Println("Server running @ http://localhost:8080")
