@@ -61,6 +61,8 @@ func (h *handler) restrictMethods(methods ...string) {
 
 // respond is a helper function for normalize errorhandle
 func (h handler) respond(v interface{}, errs ...error) {
+	errs = clean(errs...)
+
 	switch {
 	case len(errs) > 0:
 		if h.code > 0 {
@@ -81,4 +83,13 @@ func (h handler) respond(v interface{}, errs ...error) {
 		err := json.NewEncoder(h.w).Encode(v)
 		h.handle(err, http.StatusInternalServerError)
 	}
+}
+
+func clean(errs ...error) (res []error) {
+	for _, err := range errs {
+		if err != nil {
+			res = append(res, err)
+		}
+	}
+	return res
 }

@@ -35,7 +35,8 @@ func (c client) saveSubscription(sub *Subscription) (path string, err error) {
 }
 
 func (c client) getSubscriptions(list *MailingList) (subs []Subscription, err error) {
-	q := datastore.NewQuery("Subscription").Filter("List =", list.Name)
+	subs = make([]Subscription, 0)
+	q := datastore.NewQuery("Subscription").Ancestor(list.key)
 	keys, err := c.GetAll(context.TODO(), q, &subs)
 	for i, sub := range subs {
 		sub.list = list
