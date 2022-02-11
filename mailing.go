@@ -1,17 +1,24 @@
 package bugle
 
-import "cloud.google.com/go/datastore"
+import (
+	"time"
 
-type MailingList struct {
-	key   *datastore.Key
-	Name  string `json:"name"`
-	Owner string `json:"owner"`
+	"cloud.google.com/go/datastore"
+)
+
+type Audience struct {
+	key *datastore.Key
+
+	Name    string    `json:"name"`
+	Owner   string    `json:"owner"`
+	Created time.Time `json:"created"`
 }
 
-type Subscription struct {
-	key  *datastore.Key
-	list *MailingList
+type Member struct {
+	key *datastore.Key
+	aud *Audience
 
-	User string `json:"user"`
-	Addr string `json:"address"`
+	Name   string    `json:"name"`
+	Email  string    `json:"email"`
+	Joined time.Time `json:"joined"`
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"cloud.google.com/go/datastore"
+	"github.com/pkg/errors"
+	"google.golang.org/api/iterator"
 )
 
 func Datastore(id string) (*client, error) {
@@ -13,39 +15,58 @@ func Datastore(id string) (*client, error) {
 
 type client struct{ *datastore.Client }
 
-func (c client) saveMailingList(list *MailingList) (path string, err error) {
-	if list.key == nil {
-		list.key = datastore.IncompleteKey("MailingList", nil)
+func (c client) saveAudience(aud *Audience) (path string, err error) {
+	if aud.key == nil {
+		aud.key = datastore.IncompleteKey("Audience", nil)
 	}
 
-	list.key, err = c.Put(context.TODO(), list.key, list)
-	return list.key.String(), err
+	aud.key, err = c.Put(context.TODO(), aud.key, aud)
+	return aud.key.String(), err
 }
 
-func (c client) getMailingList(name string) (list MailingList, err error) {
-	list.key = datastore.NameKey("MailingList", name, nil)
-	err = c.Get(context.TODO(), list.key, &list)
-	return list, err
+func (c client) getAudience(name string) (aud Audience, err error) {
+	aud.key = datastore.NameKey("Audience", name, nil)
+	err = c.Get(context.TODO(), aud.key, &aud)
+	return aud, err
 }
 
-func (c client) saveSubscription(sub *Subscription) (path string, err error) {
-	sub.key = datastore.NameKey("Subscription", sub.Addr, sub.list.key)
+func (c client) getAudienceForUser(email string) (auds []Audience, err error) {
+	q := datastore.NewQuery("Audience").Order("-Created").Filter("Owner =", email)
+	iter := c.Run(context.TODO(), q)
+
+	for {
+		var aud Audience
+		if _, ierr := iter.Next(&aud); ierr == iterator.Done {
+			break
+		} else if ierr != nil {
+			err = errors.Wrap(ierr, "Error fetching next audience")
+			break
+		}
+
+		auds = append(auds, aud)
+	}
+
+	return auds, err
+}
+
+func (c client) saveMember(sub *Member) (path string, err error) {
+	sub.key = datastore.NameKey("Member", sub.Email, sub.aud.key)
 	sub.key, err = c.Put(context.TODO(), sub.key, sub)
 	return sub.key.String(), err
 }
 
-func (c client) getSubscriptions(list *MailingList) (subs []Subscription, err error) {
-	subs = make([]Subscription, 0)
-	q := datastore.NewQuery("Subscription").Ancestor(list.key)
-	keys, err := c.GetAll(context.TODO(), q, &subs)
-	for i, sub := range subs {
-		sub.list = list
+func (c client) getMembers(aud *Audience) (members []Member, err error) {
+	members = make([]Member, 0)
+	q := datastore.NewQuery("Member").Ancestor(aud.key)
+	keys, err := c.GetAll(context.TODO(), q, &members)
+	for i, sub := range members {
+		sub.aud = aud
 		sub.key = keys[i]
 	}
-	return subs, err
+	return members, err
 }
 
-func (c client) deleteSubscription(list *MailingList, addr string) error {
-	key := datastore.NameKey("Subscription", addr, list.key)
+func (c client) deleteMember(aud *Audience, addr string) error {
+	key := datastore.NameKey("Member", addr, aud.key)
 	return c.Delete(context.TODO(), key)
 }

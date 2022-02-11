@@ -4,22 +4,31 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"html/template"
 	"io/ioutil"
 	"net/http"
 )
 
+var globalTemplates []string = []string{
+	"templates/layouts/main.html",
+}
+
 // request is for an individual request
 type handler struct {
-	w    http.ResponseWriter
-	r    *http.Request
+	w http.ResponseWriter
+	r *http.Request
+	t *template.Template
+
 	err  error
 	code int
 }
 
-// listName is getter for url querystring value "list"
-func (h handler) list() *MailingList {
-	list := h.r.Context().Value("list").(MailingList)
-	return &list
+// listName is getter for url querystring value "aud"
+func (h handler) aud() *Audience {
+	if aud, ok := h.r.Context().Value("aud").(Audience); ok {
+		return &aud
+	}
+	return nil
 }
 
 // gmail is a getter for gmail client
@@ -35,7 +44,7 @@ func (h handler) body() string {
 }
 
 // fail error
-func (h *handler) handle(err error, code int) {
+func (h handler) handle(err error, code int) {
 	if err != nil {
 		panic(serverError{err, code})
 	}
@@ -47,14 +56,19 @@ type serverError struct {
 	code int
 }
 
-func (h *handler) restrictMethods(methods ...string) {
+func (h handler) restrictMethods(methods ...string) {
 	for _, m := range methods {
 		if h.r.Method == m {
 			return
 		}
 	}
-
 	h.handle(errors.New("Invalid method"), http.StatusMethodNotAllowed)
+}
+
+func (h handler) requireAudience(methods ...string) {
+	if aud := h.aud(); aud == nil {
+		h.handle(errors.New("Audience query param required"), http.StatusMethodNotAllowed)
+	}
 }
 
 // respond is a helper function for normalize errorhandle
@@ -67,6 +81,10 @@ func (h handler) respond(v interface{}, errs ...error) {
 			buff.WriteString(err.Error() + "\n")
 		}
 		buff.WriteTo(h.w)
+
+	case h.t != nil:
+		h.w.Header().Add("Content-Type", "text/html")
+		h.handle(h.t.Execute(h.w, v), http.StatusInternalServerError)
 
 	default:
 		h.handle(
@@ -83,4 +101,18 @@ func clean(errs []error) (res []error) {
 		}
 	}
 	return res
+}
+
+func (h *handler) loadView(name string) {
+	h.t, h.err = template.ParseFiles("views/" + name + ".html")
+	if h.err != nil {
+		h.code = http.StatusNotFound
+	}
+}
+
+func (h handler) catch() {
+	if r, ok := recover().(serverError); ok {
+		h.code = r.code
+		h.respond(nil, r.err)
+	}
 }

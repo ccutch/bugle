@@ -1,0 +1,6 @@
+indexes:
+- kind: Audience
+  properties:
+  - name: Owner
+  - name: Created
+    direction: desc
