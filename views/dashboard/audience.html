@@ -1,0 +1,19 @@
+{{template "base" .}}
+
+{{define "title"}}{{.Audience.Name}} - Bugle Audience{{end}}
+
+{{define "main"}}
+<h1>{{.Audience.Name}}</h1>
+
+<ul class="members">
+  {{range .Members}}
+  <li class="member">
+    <img src="//robohash.org/{{.Email}}" />
+    <h3>{{.Name}}</h3>
+    <h5 class="email">
+      <a href="mailto:{{.Email}}">{{.Email}}</a>
+    </h5>
+  </li>
+  {{end}}
+</ul>
+{{end}}

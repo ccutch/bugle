@@ -1,0 +1,30 @@
+.audiences {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.audiences > .audience {
+  text-decoration: none;
+  padding: 12px 20px;
+  border: 2px solid #4db6ac;
+  border-radius: 8px;
+  background: white;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 200ms ease-in-out;
+  max-width: 400px;
+  width: 100%;
+}
+.audiences > .audience:hover {
+  opacity: 1;
+}
+
+.audiences > .audience > h4,
+.audiences > .audience > h6 {
+  margin: 0px;
+  color: #747474;
+}
+.audiences > .audience > h6 {
+  color: #4db6ac;
+}

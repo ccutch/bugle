@@ -1,0 +1,34 @@
+.profile {
+  display: grid;
+  grid-template-columns: 84px auto;
+  padding: 24px 0px;
+  margin-top: 24px;
+}
+
+.profile > img {
+  height: 64px;
+  width: 64px;
+  border-radius: 10px;
+  background: #eee;
+  grid-row: span 2;
+}
+
+.profile > h2 {
+  margin: 0px;
+  color: #545454;
+}
+.profile > h4 {
+  margin: 0px;
+  color: #bcbcbc;
+}
+.profile > h4 > a {
+  font-size: 0.8em;
+  margin-left: 20px;
+  color: #4db6ac;
+  opacity: 0.6;
+}
+
+.profile > h4 > a:hover {
+  opacity: 1;
+  cursor: pointer;
+}

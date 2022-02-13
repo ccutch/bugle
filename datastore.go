@@ -30,13 +30,15 @@ func (c client) getAudience(name string) (aud Audience, err error) {
 	return aud, err
 }
 
-func (c client) getAudienceForUser(email string) (auds []Audience, err error) {
-	q := datastore.NewQuery("Audience").Order("-Created").Filter("Owner =", email)
+func (c client) getAudienceForUser(u *user) (auds []Audience, err error) {
+	q := datastore.NewQuery("Audience") //.Order("-Created").Filter("Owner =", u.Email)
 	iter := c.Run(context.TODO(), q)
 
 	for {
 		var aud Audience
-		if _, ierr := iter.Next(&aud); ierr == iterator.Done {
+		key, ierr := iter.Next(&aud)
+		aud.key = key
+		if ierr == iterator.Done {
 			break
 		} else if ierr != nil {
 			err = errors.Wrap(ierr, "Error fetching next audience")

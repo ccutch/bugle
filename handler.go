@@ -19,6 +19,7 @@ type handler struct {
 	r *http.Request
 	t *template.Template
 
+	api  bool
 	err  error
 	code int
 }
@@ -27,6 +28,13 @@ type handler struct {
 func (h handler) aud() *Audience {
 	if aud, ok := h.r.Context().Value("aud").(Audience); ok {
 		return &aud
+	}
+	return nil
+}
+
+func (h handler) user() *user {
+	if user, ok := h.r.Context().Value("user").(user); ok {
+		return &user
 	}
 	return nil
 }
@@ -65,9 +73,15 @@ func (h handler) restrictMethods(methods ...string) {
 	h.handle(errors.New("Invalid method"), http.StatusMethodNotAllowed)
 }
 
-func (h handler) requireAudience(methods ...string) {
+func (h handler) requireAudience() {
 	if aud := h.aud(); aud == nil {
 		h.handle(errors.New("Audience query param required"), http.StatusMethodNotAllowed)
+	}
+}
+
+func (h handler) requireUser() {
+	if user := h.user(); user == nil {
+		h.handle(errors.New("User requried"), http.StatusMethodNotAllowed)
 	}
 }
 
@@ -103,8 +117,17 @@ func clean(errs []error) (res []error) {
 	return res
 }
 
-func (h *handler) loadView(name string) {
-	h.t, h.err = template.ParseFiles("views/" + name + ".html")
+func (h *handler) loadView(names ...string) {
+	if h.api {
+		return
+	}
+
+	var files []string
+	for _, name := range names {
+		files = append(files, "views/"+name+".html")
+	}
+
+	h.t, h.err = template.ParseFiles(files...)
 	if h.err != nil {
 		h.code = http.StatusNotFound
 	}

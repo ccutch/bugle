@@ -1,24 +1,36 @@
 package bugle
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func (s server) viewAudiences(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
+	defer h.catch()
+	h.requireUser()
 	h.restrictMethods("GET", "POST")
-	h.loadView("audience-list")
+	h.loadView("dashboard/audience-list", "dashboard/_layout")
 
-	h.respond(db.getAudienceForUser("Connor"))
+	auds, err := db.getAudienceForUser(h.user())
+	h.respond(&struct {
+		User      *user
+		Audiences []Audience
+	}{h.user(), auds}, err)
 }
 
+// viewAudience [GET | POST] /audience
+// Methods for audience, viewing and adding member
 func (s server) viewAudience(w http.ResponseWriter, r *http.Request) {
 	h, db := s.handle(w, r)
-	h.restrictMethods("GET", "POST")
+	defer h.catch()
+	h.requireUser()
 	h.requireAudience()
-	h.loadView("audience")
+	h.restrictMethods("GET", "POST")
+	h.loadView("dashboard/audience", "dashboard/_layout")
 
-	m, err := db.getMembers(h.aud())
+	mems, err := db.getMembers(h.aud())
 	h.respond(&struct {
-		Audience *Audience `json:"audience"`
-		Members  []Member  `json:"members"`
-	}{h.aud(), m}, err)
+		Audience *Audience
+		Members  []Member
+	}{h.aud(), mems}, err)
 }

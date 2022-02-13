@@ -1,0 +1,33 @@
+@import url("/public/dashboard/members.css");
+@import url("/public/dashboard/profile.css");
+@import url("/public/dashboard/audiences.css");
+
+.dashboard > header {
+  padding: 12px 48px;
+  background: #4db6ac;
+}
+.dashboard > header > .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard > header h1 {
+  margin: 0px;
+  font-size: 20px;
+}
+.dashboard > header h1 > a {
+  color: white;
+  text-decoration: none;
+}
+.dashboard > header h1 > a:hover {
+  text-decoration: underline;
+}
+
+.dashboard > header nav > a {
+  color: white;
+  text-decoration: none;
+}
+.dashboard > header nav > a:hover {
+  text-decoration: underline;
+}

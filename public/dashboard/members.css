@@ -1,0 +1,45 @@
+/* Members List */
+.members {
+  list-style: none;
+  padding: 0px;
+  max-width: 550px;
+  width: 100%;
+}
+.member {
+  border: 2px solid #e2e2e2;
+  overflow: hidden;
+  border-bottom: none;
+  display: flex;
+  align-items: center;
+}
+.member:first-child {
+  border-top-right-radius: 6px;
+  border-top-left-radius: 6px;
+}
+.member:last-child {
+  border-bottom-right-radius: 6px;
+  border-bottom-left-radius: 6px;
+  border-bottom: 2px solid #e2e2e2;
+}
+.member img {
+  height: 32px;
+  margin-right: 10px;
+  background: #eee;
+  aspect-ratio: 1;
+}
+.member > * {
+  margin: 0px;
+}
+.member .email {
+  margin-left: auto;
+  margin-right: 10px;
+}
+.member .email a {
+  text-decoration: none;
+  color: #cdcdcd;
+}
+.member .email:hover a {
+  color: #4db6ac;
+  text-decoration: underline;
+  cursor: pointer;
+}

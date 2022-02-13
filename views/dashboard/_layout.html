@@ -1,0 +1,29 @@
+{{define "base"}}
+<!doctype html>
+<html lang='en'>
+
+<head>
+  <meta charset='utf-8'>
+  <title>{{template "title" .}} - Bugle Mail</title>
+  <link rel="stylesheet" href="/public/styles.css">
+  <link rel="stylesheet" href="/public/dashboard.css">
+</head>
+
+<body class="dashboard">
+  <header>
+    <div class="container">
+      <h1><a href='/'>Bugle Mail</a></h1>
+
+      <nav>
+        <a href='/'>My Audiences</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {{template "main" .}}
+  </main>
+</body>
+
+</html>
+{{end}}

@@ -14,6 +14,8 @@ type Audience struct {
 	Created time.Time `json:"created"`
 }
 
+func (a Audience) ID() string { return a.key.Name }
+
 type Member struct {
 	key *datastore.Key
 	aud *Audience

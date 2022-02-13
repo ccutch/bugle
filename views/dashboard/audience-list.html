@@ -1,0 +1,21 @@
+{{template "base" .}}
+
+{{define "title"}}{{.User.Name}} Dashboard{{end}}
+
+{{define "main"}}
+<div class="profile">
+  <img src="//robohash.org/{{.User.Email}}" />
+  <h2>{{.User.Name}}</h2>
+  <h4>{{.User.Email}}<a href="https://bugle-340607.appspot.com/?gcp-iap-mode=CLEAR_LOGIN_COOKIE
+">Change account</a></h4>
+</div>
+
+<div class="audiences">
+  {{range .Audiences}}
+  <a class="audience" href="/audience?aud={{.ID}}">
+    <h4>{{.Name}}</h4>
+    <h6>5 audience members</h6>
+  </a>
+  {{end}}
+</div>
+{{end}}
