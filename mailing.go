@@ -15,6 +15,9 @@ type Audience struct {
 }
 
 func (a Audience) ID() string { return a.key.Name }
+func (a Audience) IsZero() bool {
+	return a.key.Incomplete() && a.Name == "" && a.Owner == "" && a.Created.IsZero()
+}
 
 type Member struct {
 	key *datastore.Key

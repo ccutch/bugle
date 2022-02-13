@@ -2,6 +2,7 @@ package bugle
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -19,21 +20,28 @@ type handler struct {
 	r *http.Request
 	t *template.Template
 
-	api  bool
+	ctx    context.Context
+	cancel context.CancelFunc
+
 	err  error
 	code int
 }
 
 // listName is getter for url querystring value "aud"
 func (h handler) aud() *Audience {
-	if aud, ok := h.r.Context().Value("aud").(Audience); ok {
+	if aud, ok := h.ctx.Value("aud").(Audience); ok {
 		return &aud
 	}
 	return nil
 }
 
+func (h handler) api() bool {
+	api, _ := h.ctx.Value("api").(bool)
+	return api
+}
+
 func (h handler) user() *user {
-	if user, ok := h.r.Context().Value("user").(user); ok {
+	if user, ok := h.ctx.Value("user").(user); ok {
 		return &user
 	}
 	return nil
@@ -41,54 +49,57 @@ func (h handler) user() *user {
 
 // gmail is a getter for gmail client
 func (h handler) gmail() *GmailClient {
-	return Gmail(h.r.Context())
+	return Gmail(h.ctx)
 }
 
 // body is a simple body parser
-func (h handler) body() string {
+func (h *handler) body() string {
 	body, err := ioutil.ReadAll(h.r.Body)
 	h.handle(err, http.StatusBadRequest)
 	return string(body)
 }
 
 // fail error
-func (h handler) handle(err error, code int) {
-	if err != nil {
-		panic(serverError{err, code})
+func (h *handler) handle(err error, code int) {
+	if err == nil {
+		return
 	}
+
+	h.err = err
+	h.code = code
+	h.cancel()
 }
 
-// serverError to encapsolate state
-type serverError struct {
-	err  error
-	code int
-}
-
-func (h handler) restrictMethods(methods ...string) {
+func (h *handler) restrictMethods(methods ...string) {
 	for _, m := range methods {
 		if h.r.Method == m {
 			return
 		}
 	}
+
 	h.handle(errors.New("Invalid method"), http.StatusMethodNotAllowed)
 }
 
-func (h handler) requireAudience() {
-	if aud := h.aud(); aud == nil {
-		h.handle(errors.New("Audience query param required"), http.StatusMethodNotAllowed)
+func (h *handler) requireAudience() {
+	aud := h.aud()
+	if aud.IsZero() {
+		err := errors.New("Audience query param required")
+		h.handle(err, http.StatusBadRequest)
 	}
 }
 
-func (h handler) requireUser() {
+func (h *handler) requireUser() {
 	if user := h.user(); user == nil {
-		h.handle(errors.New("User requried"), http.StatusMethodNotAllowed)
+		err := errors.New("User requried")
+		h.handle(err, http.StatusBadRequest)
 	}
 }
 
 // respond is a helper function for normalize errorhandle
-func (h handler) respond(v interface{}, errs ...error) {
+func (h *handler) respond(v interface{}, errs ...error) {
 	h.w.WriteHeader(h.code)
-	switch errs = clean(errs); { // I wrote this way because worse with ifs
+	switch errs = clean(append(errs, h.err)); { // I wrote this way because worse with ifs
+
 	case len(errs) > 0:
 		buff := bytes.NewBuffer([]byte("Error:\n\n"))
 		for _, err := range errs {
@@ -118,7 +129,7 @@ func clean(errs []error) (res []error) {
 }
 
 func (h *handler) loadView(names ...string) {
-	if h.api {
+	if h.api() {
 		return
 	}
 
@@ -127,15 +138,9 @@ func (h *handler) loadView(names ...string) {
 		files = append(files, "views/"+name+".html")
 	}
 
-	h.t, h.err = template.ParseFiles(files...)
-	if h.err != nil {
-		h.code = http.StatusNotFound
-	}
-}
-
-func (h handler) catch() {
-	if r, ok := recover().(serverError); ok {
-		h.code = r.code
-		h.respond(nil, r.err)
+	var err error
+	h.t, err = template.ParseFiles(files...)
+	if err != nil {
+		h.handle(err, http.StatusNotFound)
 	}
 }

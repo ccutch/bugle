@@ -6,8 +6,8 @@ import (
 )
 
 // Server creates a new router and binds all routes
-func Server(client *client) http.Handler {
-	s := &server{http.NewServeMux(), client}
+func Server(db *database) http.Handler {
+	s := &server{http.NewServeMux(), db}
 	s.staticFiles("public")
 	s.HandleFunc("/audience", s.viewAudience)
 	s.HandleFunc("/", s.viewAudiences)
@@ -17,23 +17,27 @@ func Server(client *client) http.Handler {
 // server composes http's ServeMux struct for http routing
 type server struct {
 	*http.ServeMux
-	client *client
+	db *database
 }
 
 // ServeHTTP for http.Handler interface. We are loading variables
 // into context and use underlying serve mux with new context into
 func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	aud, _ := s.client.getAudience(r.URL.Query().Get("aud"))
-	ctx := context.WithValue(r.Context(), "aud", aud)
+	ctx := r.Context()
+	aud, _ := s.db.getAudience(ctx, r.URL.Query().Get("aud"))
+
+	ctx = context.WithValue(ctx, "aud", aud)
 	ctx = context.WithValue(ctx, "user", User("connor@bugl.email", "...token..."))
+	ctx = context.WithValue(ctx, "api", r.URL.Query().Get("api") == "true")
+
 	s.ServeMux.ServeHTTP(w, r.WithContext(ctx))
 }
 
 // handle creates a new handler, we also defer a recovery func
 // to handle serverErrors we encounter
-func (s server) handle(w http.ResponseWriter, r *http.Request) (*handler, *client) {
-	api := r.URL.Query().Get("api")
-	return &handler{w, r, nil, api == "true", nil, 200}, s.client
+func (s server) handle(w http.ResponseWriter, r *http.Request) (*handler, *database) {
+	ctx, cancel := context.WithCancel(r.Context())
+	return &handler{w, r.WithContext(ctx), nil, ctx, cancel, nil, 200}, s.db
 }
 
 // staticFiles sets up file server and handles http requests

@@ -8,31 +8,44 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-func Datastore(id string) (*client, error) {
-	c, err := datastore.NewClient(context.TODO(), id)
-	return &client{c}, err
+func Datastore(id string) (*database, error) {
+	c, err := datastore.NewClient(context.Background(), id)
+	return &database{c}, err
 }
 
-type client struct{ *datastore.Client }
+type database struct{ *datastore.Client }
 
-func (c client) saveAudience(aud *Audience) (path string, err error) {
+func (db database) saveAudience(ctx context.Context, aud *Audience) (path string, err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	if aud.key == nil {
 		aud.key = datastore.IncompleteKey("Audience", nil)
 	}
 
-	aud.key, err = c.Put(context.TODO(), aud.key, aud)
+	aud.key, err = db.Put(ctx, aud.key, aud)
 	return aud.key.String(), err
 }
 
-func (c client) getAudience(name string) (aud Audience, err error) {
+func (db database) getAudience(ctx context.Context, name string) (aud Audience, err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	aud.key = datastore.NameKey("Audience", name, nil)
-	err = c.Get(context.TODO(), aud.key, &aud)
+	err = db.Get(ctx, aud.key, &aud)
+
 	return aud, err
 }
 
-func (c client) getAudienceForUser(u *user) (auds []Audience, err error) {
+func (db database) getAudienceForUser(ctx context.Context, u *user) (auds []Audience, err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	q := datastore.NewQuery("Audience") //.Order("-Created").Filter("Owner =", u.Email)
-	iter := c.Run(context.TODO(), q)
+	iter := db.Run(ctx, q)
 
 	for {
 		var aud Audience
@@ -51,16 +64,24 @@ func (c client) getAudienceForUser(u *user) (auds []Audience, err error) {
 	return auds, err
 }
 
-func (c client) saveMember(sub *Member) (path string, err error) {
+func (db database) saveMember(ctx context.Context, sub *Member) (path string, err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	sub.key = datastore.NameKey("Member", sub.Email, sub.aud.key)
-	sub.key, err = c.Put(context.TODO(), sub.key, sub)
+	sub.key, err = db.Put(ctx, sub.key, sub)
 	return sub.key.String(), err
 }
 
-func (c client) getMembers(aud *Audience) (members []Member, err error) {
+func (db database) getMembers(ctx context.Context, aud *Audience) (members []Member, err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	members = make([]Member, 0)
 	q := datastore.NewQuery("Member").Ancestor(aud.key)
-	keys, err := c.GetAll(context.TODO(), q, &members)
+	keys, err := db.GetAll(ctx, q, &members)
 	for i, sub := range members {
 		sub.aud = aud
 		sub.key = keys[i]
@@ -68,7 +89,11 @@ func (c client) getMembers(aud *Audience) (members []Member, err error) {
 	return members, err
 }
 
-func (c client) deleteMember(aud *Audience, addr string) error {
+func (db database) deleteMember(ctx context.Context, aud *Audience, addr string) (err error) {
+	if ctx.Err() != nil {
+		return
+	}
+
 	key := datastore.NameKey("Member", addr, aud.key)
-	return c.Delete(context.TODO(), key)
+	return db.Delete(ctx, key)
 }
