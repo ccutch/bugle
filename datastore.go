@@ -2,6 +2,7 @@ package bugle
 
 import (
 	"context"
+	"strconv"
 
 	"cloud.google.com/go/datastore"
 	"github.com/pkg/errors"
@@ -15,17 +16,17 @@ func Datastore(id string) (*database, error) {
 
 type database struct{ *datastore.Client }
 
-func (db database) saveAudience(ctx context.Context, aud *Audience) (path string, err error) {
+func (db database) saveAudience(ctx context.Context, aud *Audience) (err error) {
 	if ctx.Err() != nil {
 		return
 	}
 
 	if aud.key == nil {
-		aud.key = datastore.IncompleteKey("Audience", nil)
+		aud.key = datastore.NameKey("Audience", aud.KeyName(), nil)
 	}
 
 	aud.key, err = db.Put(ctx, aud.key, aud)
-	return aud.key.String(), err
+	return err
 }
 
 func (db database) getAudience(ctx context.Context, name string) (aud Audience, err error) {
@@ -33,7 +34,12 @@ func (db database) getAudience(ctx context.Context, name string) (aud Audience, 
 		return
 	}
 
-	aud.key = datastore.NameKey("Audience", name, nil)
+	if id, err := strconv.Atoi(name); err == nil {
+		aud.key = datastore.IDKey("Audience", int64(id), nil)
+	} else {
+		aud.key = datastore.NameKey("Audience", name, nil)
+	}
+
 	err = db.Get(ctx, aud.key, &aud)
 
 	return aud, err
@@ -44,7 +50,7 @@ func (db database) getAudienceForUser(ctx context.Context, u *user) (auds []Audi
 		return
 	}
 
-	q := datastore.NewQuery("Audience") //.Order("-Created").Filter("Owner =", u.Email)
+	q := datastore.NewQuery("Audience").Order("-Created").Filter("Owner =", u.Email)
 	iter := db.Run(ctx, q)
 
 	for {
@@ -64,14 +70,14 @@ func (db database) getAudienceForUser(ctx context.Context, u *user) (auds []Audi
 	return auds, err
 }
 
-func (db database) saveMember(ctx context.Context, sub *Member) (path string, err error) {
+func (db database) saveMember(ctx context.Context, sub *Member) (err error) {
 	if ctx.Err() != nil {
 		return
 	}
 
 	sub.key = datastore.NameKey("Member", sub.Email, sub.aud.key)
 	sub.key, err = db.Put(ctx, sub.key, sub)
-	return sub.key.String(), err
+	return err
 }
 
 func (db database) getMembers(ctx context.Context, aud *Audience) (members []Member, err error) {

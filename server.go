@@ -8,7 +8,7 @@ import (
 // Server creates a new router and binds all routes
 func Server(db *database) http.Handler {
 	s := &server{http.NewServeMux(), db}
-	s.staticFiles("public")
+	s.static("public")
 	s.HandleFunc("/audience", s.viewAudience)
 	s.HandleFunc("/", s.viewAudiences)
 	return s
@@ -23,13 +23,17 @@ type server struct {
 // ServeHTTP for http.Handler interface. We are loading variables
 // into context and use underlying serve mux with new context into
 func (s server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	aud, _ := s.db.getAudience(ctx, r.URL.Query().Get("aud"))
-
+	// using and updating request context per request
+	var ctx = r.Context()
+	// load audience & user, ignoring error for zero value
+	var aud, _ = s.db.getAudience(ctx, r.URL.Query().Get("aud"))
+	var usr, _ = parseUser(r)
+	// context variables
+	ctx = context.WithValue(ctx, "usr", usr)
 	ctx = context.WithValue(ctx, "aud", aud)
-	ctx = context.WithValue(ctx, "user", User("connor@bugl.email", "...token..."))
+	// context flags
 	ctx = context.WithValue(ctx, "api", r.URL.Query().Get("api") == "true")
-
+	// defer serve http to serve mux
 	s.ServeMux.ServeHTTP(w, r.WithContext(ctx))
 }
 
@@ -42,7 +46,7 @@ func (s server) handle(w http.ResponseWriter, r *http.Request) (*handler, *datab
 
 // staticFiles sets up file server and handles http requests
 // with the same name
-func (s server) staticFiles(d string) {
+func (s server) static(d string) {
 	fs := http.FileServer(http.Dir("./" + d))
 	s.Handle("/"+d+"/", http.StripPrefix("/"+d+"/", fs))
 }

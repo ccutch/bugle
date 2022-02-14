@@ -1,7 +1,8 @@
 .audiences {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 24px;
+  max-width: calc(100% + 20px);
+  margin: 24px -10px 0px;
 }
 
 .audiences > .audience {
@@ -13,8 +14,9 @@
   opacity: 0.6;
   cursor: pointer;
   transition: opacity 200ms ease-in-out;
-  max-width: 400px;
+  max-width: 380px;
   width: 100%;
+  margin: 0px 10px 10px;
 }
 .audiences > .audience:hover {
   opacity: 1;

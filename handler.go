@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -41,7 +42,7 @@ func (h handler) api() bool {
 }
 
 func (h handler) user() *user {
-	if user, ok := h.ctx.Value("user").(user); ok {
+	if user, ok := h.ctx.Value("usr").(user); ok {
 		return &user
 	}
 	return nil
@@ -81,10 +82,9 @@ func (h *handler) restrictMethods(methods ...string) {
 }
 
 func (h *handler) requireAudience() {
-	aud := h.aud()
-	if aud.IsZero() {
-		err := errors.New("Audience query param required")
-		h.handle(err, http.StatusBadRequest)
+	if aud := h.aud(); aud.IsZero() {
+		msg := fmt.Sprintf("Audience %s not found", h.r.URL.Query().Get("aud"))
+		h.handle(errors.New(msg), http.StatusBadRequest)
 	}
 }
 
@@ -96,7 +96,7 @@ func (h *handler) requireUser() {
 }
 
 // respond is a helper function for normalize errorhandle
-func (h *handler) respond(v interface{}, errs ...error) {
+func (h handler) respond(v interface{}, errs ...error) {
 	h.w.WriteHeader(h.code)
 	switch errs = clean(append(errs, h.err)); { // I wrote this way because worse with ifs
 
@@ -109,14 +109,15 @@ func (h *handler) respond(v interface{}, errs ...error) {
 
 	case h.t != nil:
 		h.w.Header().Add("Content-Type", "text/html")
-		h.handle(h.t.Execute(h.w, v), http.StatusInternalServerError)
+		h.t.Execute(h.w, v)
 
 	default:
-		h.handle(
-			json.NewEncoder(h.w).Encode(v),
-			http.StatusInternalServerError,
-		)
+		json.NewEncoder(h.w).Encode(v)
 	}
+}
+
+func (h handler) redirect(url string) {
+	http.Redirect(h.w, h.r, url, http.StatusTemporaryRedirect)
 }
 
 func clean(errs []error) (res []error) {
