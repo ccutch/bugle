@@ -3,27 +3,17 @@ package bugle
 import "net/http"
 
 type user struct {
-	Token string `json:"-"`
 	Name  string
 	Email string
-}
-
-func User(email, token string) (u user, err error) {
-	u.Email = email
-	u.Token = token
-
-	// load name from google api
-	return u, err
+	token string
 }
 
 func parseUser(r *http.Request) (u user, err error) {
-	u.Token = r.Header.Get("x-goog-iap-jwt-assertion")
-	u.Email = r.Header.Get("x-goog-authenticated-user-email")
-
-	// TODO remove after testing
-	if u.Email == "" {
-		u.Email = "connor@bugl.email"
+	if e := r.Header.Get("x-goog-authenticated-user-email"); e == "" {
+		u.Email = "test@bugl.email"
+	} else {
+		u.Email = e[len("accounts.google.com:"):]
 	}
-
+	u.token = r.Header.Get("x-goog-iap-jwt-assertion")
 	return u, err
 }

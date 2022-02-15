@@ -19,6 +19,9 @@ type Audience struct {
 }
 
 func (a Audience) KeyName() (name string) {
+	if a.Name != "" {
+		name = a.Name
+	}
 	name = strings.Replace(a.Name, " ", "_", -1)
 	name = strings.ToLower(name)
 	name = url.QueryEscape(name)
