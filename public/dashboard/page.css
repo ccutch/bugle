@@ -1,0 +1,35 @@
+.page-header {
+  background: white;
+}
+
+.page-header > .container {
+  display: flex;
+  align-items: center;
+}
+
+.page-header .actions {
+  display: flex;
+  margin-left: 30px;
+  align-items: flex-end;
+  height: 35px;
+}
+
+.page-header .actions > a {
+  color: #4db6ac;
+  margin-right: 30px;
+  font-size: 16px;
+  text-decoration: none;
+  opacity: 0.6;
+}
+
+.page-header .actions > a > i::before {
+  color: #4db6ac;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.page-header .actions > a:hover {
+  text-decoration: underline;
+  opacity: 1;
+  cursor: pointer;
+}

@@ -1,6 +1,9 @@
+@import url("/public/dashboard/page.css");
 @import url("/public/dashboard/members.css");
 @import url("/public/dashboard/profile.css");
 @import url("/public/dashboard/audiences.css");
+@import url("/public/dashboard/mail-history.css");
+@import url("/public/dashboard/mail-actions.css");
 
 .dashboard > header {
   padding: 12px 48px;

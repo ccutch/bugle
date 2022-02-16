@@ -1,0 +1,56 @@
+.mail-actions {
+  width: 100%;
+  margin-left: auto;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  height: min-content;
+}
+
+.mail-actions .action {
+  background: #4db6ac;
+  padding: 10px 20px;
+  border-radius: 10px;
+  height: 100%;
+  opacity: 0.6;
+  cursor: pointer;
+  width: 100%;
+  max-width: 230px;
+  margin-left: 10px;
+  margin-bottom: 15px;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
+  user-select: none;
+}
+.mail-actions .action:hover:not(:active) {
+  opacity: 1;
+  box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.mail-actions .action header {
+  display: flex;
+  align-items: center;
+}
+
+.mail-actions .action h5 {
+  white-space: nowrap;
+}
+
+.mail-actions .action *,
+.mail-actions .action i::before {
+  margin: 0px;
+  color: white;
+}
+.mail-actions .action i {
+  margin-right: 5px;
+  width: 16px;
+}
+
+.mail-actions .action i::before {
+  font-size: 12px;
+}
+
+.mail-actions .action p {
+  font-size: 12px;
+  padding-top: 5px;
+}

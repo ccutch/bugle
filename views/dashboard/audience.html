@@ -3,17 +3,70 @@
 {{define "title"}}{{.Audience.Name}} - Bugle Audience{{end}}
 
 {{define "main"}}
-<h1>{{.Audience.Name}}</h1>
 
-<ul class="members">
-  {{range .Members}}
-  <li class="member">
-    <img src="//robohash.org/{{.Email}}" />
-    <h3>{{.Name}}</h3>
-    <h5 class="email">
-      <a href="mailto:{{.Email}}">{{.Email}}</a>
-    </h5>
-  </li>
-  {{end}}
-</ul>
+<header class="page-header">
+  <div class="container">
+    <h1>{{.Audience.Name}}</h1>
+
+    <div class="actions">
+      <a href="/#/add">
+        <i class="fas fa-user-plus"></i>
+        Add members
+      </a>
+      <a href="/#/copy">
+        <i class="fa-solid fa-link"></i>
+        Copy invite link
+      </a>
+    </div>
+  </div>
+</header>
+
+<div class="members">
+  <div class="container">
+    {{range .Members}}
+    <div class="member">
+      <img src="//robohash.org/{{.Email}}" />
+      <h4 class="name">{{.Name}}</h4>
+      <h5 class="email">
+        <a href="mailto:{{.Email}}">{{.Email}}</a>
+      </h5>
+    </div>
+    {{end}}
+  </div>
+</div>
+
+<div class="container">
+  <div class="mail-history">
+    <label class="timestamp">2/15/2022</label>
+    <div class="announcement">
+      <header>
+        <h3>Welcome Abord</h3>
+        <div class="author">
+          <img src="//robohash.org/test@bugl.email">
+          <h5 class="name">Connor</h5>
+        </div>
+      </header>
+      <p>
+        This is going to be a fun adventure implementing this new
+        mailing list system. Thank you for taking part in this experiment.
+      </p>
+    </div>
+  </div>
+  <div class="mail-actions">
+    <div class="action">
+      <header>
+        <i class="fa-solid fa-paper-plane"></i>
+        <h5>Send Mail Blast</h5>
+      </header>
+      <p>Send a message</p>
+    </div>
+    <div class="action">
+      <header>
+        <i class="fa-solid fa-door-open"></i>
+        <h5>Set Welcome Message</h5>
+      </header>
+      <p>Set a message for new members</p>
+    </div>
+  </div>
+</div>
 {{end}}
